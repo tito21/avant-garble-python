@@ -1,0 +1,18 @@
+
+footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    bottom: 0;
+    position: relative;
+    height: 4.5em;
+}
+
+footer p {
+    margin: 0;
+}
+
+footer a {
+    color: #0084ff;
+}

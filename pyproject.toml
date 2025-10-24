@@ -1,0 +1,11 @@
+[project]
+name = "avant-garble-python"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.119.1",
+    "nltk>=3.9.2",
+    "websockets>=15.0.1",
+]
