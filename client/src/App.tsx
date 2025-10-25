@@ -9,16 +9,6 @@ import InputBox from './InputBox'
 
 import './App.css'
 
-const order = 3;
-
-function getNgram(text: string, n: number): string {
-  const tokens = text.split(" ");
-  if (tokens.length >= n) {
-    return tokens.slice(tokens.length - n, tokens.length).join(" ");
-  }
-  return tokens.join(" ") .padStart(n, " ");
-}
-
 enum MessageSuccess {
   SUCCESS,
   ERROR
@@ -32,7 +22,7 @@ function App() {
   const [responseState, setStatesResponse] = useState("");
   let currentResponseBubble: ReactElement;
   const chatEndRef = useRef<null | HTMLDivElement>(null);
-  const [messageStatusState, setStatesMessageStatus] = useState<MessageSuccess>(MessageSuccess.ERROR);
+  const [messageStatusState, setStatesMessageStatus] = useState<MessageSuccess>(MessageSuccess.SUCCESS);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -44,14 +34,12 @@ function App() {
 
   const inputBox = InputBox((value) => {
     // console.log(value);
-    let currentNgram = getNgram(value, order);
-    console.log("Current ngram:", `"${currentNgram}"`);
     setStatesResponse("");
     // let url = `get-text?currentGram=${currentNgram}`;
     setStatesBubble(prevStateArray => [...prevStateArray, <ChatBubble text={value} direction='right' id={responseNumberState} finished={false}></ChatBubble>]);
     setStatesResponseNumber(responseNumberState + 1);
     console.log(messageStatusState, MessageSuccess.ERROR);
-    sendMessage(currentNgram);
+    sendMessage(value);
     if (messageStatusState === MessageSuccess.ERROR) {
       currentResponseBubble = <ChatErrorBubble text={responseState} id={responseNumberState}></ChatErrorBubble>;
     }
@@ -64,7 +52,7 @@ function App() {
   });
 
 
-  const url = new URL('/get-text', window.location.href);
+  const url = new URL('ws/get-text', window.location.href);
   url.protocol = url.protocol.replace('http', 'ws');
   const wsUrl = url.href // => ws://www.example.com:9999/path/to/websocket
 
@@ -106,18 +94,19 @@ function App() {
     },
     onError: (event) => {
       console.error("Error", event);
-      setStatesBubble(prevStateArray => [...prevStateArray, <ChatErrorBubble text='Error getting response' id={responseNumberState}></ChatErrorBubble>]);
+      setStatesBubble(prevStateArray => [...prevStateArray, <ChatErrorBubble text='[ERROR] Error getting response' id={responseNumberState}></ChatErrorBubble>]);
       setStatesMessageStatus(() => MessageSuccess.ERROR);
       return;
     },
     onClose: (event) => {
       console.log("Close", event);
-      setStatesResponse(text => text);
-      let fullText = `${responseState}`;
-      setStatesBubble(prevStateArray => {
-        prevStateArray[prevStateArray.length - 1] = <ChatBubble text={fullText} direction='left' id={responseNumberState} finished={true}></ChatBubble>;
-        return [...prevStateArray];
-      });
+      setStatesResponse(text => ["[ERROR] Connection closed unexpectedly. ", text].join(''));
+      setStatesMessageStatus(() => MessageSuccess.ERROR);
+      // let fullText = `${responseState}`;
+      // setStatesBubble(prevStateArray => {
+      //   prevStateArray[prevStateArray.length - 1] = <ChatBubble text={fullText} direction='left' id={responseNumberState} finished={true}></ChatBubble>;
+      //   return [...prevStateArray];
+      // });
 
     },
   });

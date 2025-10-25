@@ -1,11 +1,16 @@
+import logging
+
 from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
 import ngram
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 def load_model():
-    model = ngram.load_model("model/3gram_model.cdb")
+    model = ngram.load_model("model/3gram_model_small_bytes.cdb")
     # model = ngram.load_pickle_model("model/3gram_model.pkl")
     yield model
     # Shutdown the model if needed
@@ -15,15 +20,18 @@ def load_model():
 app = FastAPI()
 
 
-@app.get("/get-text-rest")
-def get_text(input_text: str, model=Depends(load_model)):
+@app.get("/rest/get-text")
+def get_text(input_text: str, num_words: int = 50, model=Depends(load_model)):
     current_gram = ngram.get_gram(input_text, n=3, append=True)
-    generated_text = ngram.generate_text(current_gram, model)
-    return {"generatedText": generated_text}
+    generated_text = ngram.generate_text(current_gram, model, num_tokens=num_words)
+    success = True
+    if not generated_text:
+        generated_text = "[ERROR] I didn't understand that."
+        success = False
+    return {"generatedText": generated_text, "success": success}
 
 
-
-@app.websocket("/get-text")
+@app.websocket("ws/get-text")
 async def get_text_ws(websocket: WebSocket):
     await websocket.accept()
     model = ngram.load_model("model/3gram_model.cdb")
@@ -31,7 +39,8 @@ async def get_text_ws(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             current_gram = ngram.get_gram(data, n=3, append=True)
-            print("Current gram:", current_gram)
+            logger.info("Current gram: %s", current_gram)
+            logger.info("model type: %s, length: %d", type(model), len(model))
             for next_word in ngram.token_generator(current_gram, model):
                 if next_word is None:
                     await websocket.send_text("[ERROR] I didn't understand that.")
@@ -41,7 +50,7 @@ async def get_text_ws(websocket: WebSocket):
                 await websocket.send_text("[DONE]")
 
     except WebSocketDisconnect:
-        print("Client disconnected")
+        logger.info("Client disconnected")
     finally:
         model.close()
 

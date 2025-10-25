@@ -1,10 +1,16 @@
+import logging
 from typing import Generator, MutableMapping
 
-import pickle
 import dbm
 import random
 
+from fastapi.logger import logger
 from nltk.tokenize import word_tokenize
+from nltk.tokenize.treebank import TreebankWordDetokenizer
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def get_gram(input_text: str, n: int = 3, append: bool = False) -> tuple[str]:
@@ -27,38 +33,32 @@ def generate_text(
         if next_word is None:
             break
         output.append(next_word)
-    return " ".join(output)
+
+    sentence = TreebankWordDetokenizer().detokenize(output)
+    return sentence
 
 
 def token_generator(
     current_gram: tuple[str],
-    model: MutableMapping[str, list[str]] | MutableMapping[bytes, bytes],
+    model: dict[str, list[str]] | MutableMapping[bytes, bytes],
     num_tokens: int = 50,
 ) -> Generator[str, None]:
     i = 0
     while i < num_tokens:
-        if isinstance(model, dict):
-            possibilities = model.get(current_gram)
-        else:
-            possibilities = (
-                pickle.loads(model[pickle.dumps(current_gram)])
-                if pickle.dumps(current_gram) in model
-                else None
-            )
+        current_ngram_bytes = bytearray('\x00'.join(current_gram), 'utf-8')
+        possibilities = (
+            list(model[current_ngram_bytes].decode('utf-8').split('\x00'))
+            if current_ngram_bytes in model
+            else None
+        )
         if not possibilities:
-            print("No possibilities found, stopping generation.")
+            logger.warning("No possibilities found, stopping generation.")
             yield None
             break
         next_word = random.choice(possibilities)
         i += 1
         current_gram = (*current_gram[1:], next_word)
         yield next_word
-
-
-def load_pickle_model(file_path: str) -> MutableMapping[str, list[str]]:
-    with open(file_path, "rb") as f:
-        model = pickle.load(f)
-    return model
 
 
 def load_model(db_path: str) -> MutableMapping[bytes, bytes]:
