@@ -2,11 +2,17 @@ import logging
 
 from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 import ngram
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class GeneratedResponse(BaseModel):
+    generatedText: str
+    success: bool
 
 
 def load_model():
@@ -21,14 +27,14 @@ app = FastAPI()
 
 
 @app.get("/rest/get-text")
-def get_text(input_text: str, num_words: int = 50, model=Depends(load_model)):
+def get_text(input_text: str, num_words: int = 50, model=Depends(load_model)) -> GeneratedResponse:
     current_gram = ngram.get_gram(input_text, n=3, append=True)
     generated_text = ngram.generate_text(current_gram, model, num_tokens=num_words)
     success = True
     if not generated_text:
         generated_text = "[ERROR] I didn't understand that."
         success = False
-    return {"generatedText": generated_text, "success": success}
+    return GeneratedResponse(generatedText=generated_text, success=success)
 
 
 @app.websocket("ws/get-text")
