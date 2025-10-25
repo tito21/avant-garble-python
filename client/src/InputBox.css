@@ -8,7 +8,7 @@
     border-radius: 10px;
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
     color: white;
-    width: 70%;
+    width: calc(100% - 20px);
     background-color: #333;
 }
 
@@ -20,8 +20,8 @@
     width: 100%;
 }
 
-textarea {
-    width: 100%;
+.input-form > textarea {
+    width: 82%;
     height: 100%;
     background-color: #333;
     color: white;
@@ -30,6 +30,11 @@ textarea {
     font-size: 1.2em;
 }
 
-textarea:focus {
+.input-form > textarea:focus {
     outline: none;
+}
+
+.input-form > button {
+  padding: 0.6em 1.2em;
+  width: calc(18% - 0.6em);
 }
