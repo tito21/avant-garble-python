@@ -1,5 +1,4 @@
 import { ReactElement, useState, useRef, useEffect } from 'react'
-import useWebSocket from "react-use-websocket"
 
 import Footer from './Footer'
 import ChatBubble from './ChatBubble'
@@ -9,20 +8,15 @@ import InputBox from './InputBox'
 
 import './App.css'
 
-enum MessageSuccess {
-  SUCCESS,
-  ERROR
-}
-
 function App() {
 
   const bubblesArray: ReactElement[] = [];
   const [bubblesState, setStatesBubble] = useState(bubblesArray);
   const [responseNumberState, setStatesResponseNumber] = useState(0);
-  const [responseState, setStatesResponse] = useState("");
+  // const [responseState, setStatesResponse] = useState("");
   let currentResponseBubble: ReactElement;
   const chatEndRef = useRef<null | HTMLDivElement>(null);
-  const [messageStatusState, setStatesMessageStatus] = useState<MessageSuccess>(MessageSuccess.SUCCESS);
+  // const [messageStatusState, setStatesMessageStatus] = useState<MessageSuccess>(MessageSuccess.SUCCESS);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -32,85 +26,36 @@ function App() {
   }, [bubblesState]);
 
 
-  const inputBox = InputBox((value) => {
-    // console.log(value);
-    setStatesResponse("");
-    // let url = `get-text?currentGram=${currentNgram}`;
+  const inputBox = InputBox(async (value) => {
+
     setStatesBubble(prevStateArray => [...prevStateArray, <ChatBubble text={value} direction='right' id={responseNumberState} finished={false}></ChatBubble>]);
     setStatesResponseNumber(responseNumberState + 1);
-    console.log(messageStatusState, MessageSuccess.ERROR);
-    sendMessage(value);
-    if (messageStatusState === MessageSuccess.ERROR) {
-      currentResponseBubble = <ChatErrorBubble text={responseState} id={responseNumberState}></ChatErrorBubble>;
-    }
-    else {
-      currentResponseBubble = <ChatBubble text={responseState} direction='left' id={responseNumberState} finished={true}></ChatBubble>;
-    }
+    currentResponseBubble = await sendMessage(value);
     setStatesBubble(prevStateArray => [...prevStateArray, currentResponseBubble]);
     setStatesResponseNumber(responseNumberState + 1);
 
   });
 
-
-  const url = new URL('ws/get-text', window.location.href);
-  url.protocol = url.protocol.replace('http', 'ws');
-  const wsUrl = url.href // => ws://www.example.com:9999/path/to/websocket
-
-  const {
-    sendMessage,
-  } = useWebSocket(wsUrl, {
-    shouldReconnect: () => true,
-    onMessage: (event) => {
-      // console.log("Message", event.data);
-      if (event.data === "[DONE]") {
-        let fullText = `${responseState}`;
-        setStatesBubble(prevStateArray => {
-          prevStateArray[prevStateArray.length - 1] = <ChatBubble text={fullText} direction='left' id={responseNumberState} finished={true}></ChatBubble>;
-          return [...prevStateArray];
-        });
-        setStatesResponse("");
-        setStatesMessageStatus(() => MessageSuccess.SUCCESS);
-        return;
-      }
-      else if (event.data.startsWith("[ERROR]")) {
-        console.error("Error from server:", event.data);
-        setStatesBubble(prevStateArray => {
-          const errorBubble = <ChatErrorBubble text={event.data} id={responseNumberState}></ChatErrorBubble>;
-          prevStateArray[prevStateArray.length - 1] = errorBubble;
-          return [...prevStateArray];
-        });
-        setStatesResponse(event.data);
-        setStatesMessageStatus(() => MessageSuccess.ERROR);
-        return;
+  const sendMessage = async (inputText: string) => {
+    try {
+      const response = await fetch(`/rest/get-text?input_text=${encodeURIComponent(inputText)}&num_words=50`);
+      const data = await response.json();
+      console.log(data, data.generatedText);
+      // setStatesResponse(data.generatedText);
+      if (data.success) {
+        currentResponseBubble = <ChatBubble text={data.generatedText} direction='left' id={responseNumberState} finished={true}></ChatBubble>;
+      } else {
+        currentResponseBubble = <ChatErrorBubble text={data.generatedText} id={responseNumberState}></ChatErrorBubble>;
       }
 
-      // console.log("text", responseState);
-      setStatesResponse(text => text + event.data);
-      let fullText = `${responseState}`;
-      setStatesBubble(prevStateArray => {
-        prevStateArray[prevStateArray.length - 1] = <ChatBubble text={fullText} direction='left' id={responseNumberState} finished={false}></ChatBubble>;
-        return [...prevStateArray];
-      });
-    },
-    onError: (event) => {
-      console.error("Error", event);
-      setStatesBubble(prevStateArray => [...prevStateArray, <ChatErrorBubble text='[ERROR] Error getting response' id={responseNumberState}></ChatErrorBubble>]);
-      setStatesMessageStatus(() => MessageSuccess.ERROR);
-      return;
-    },
-    onClose: (event) => {
-      console.log("Close", event);
-      setStatesResponse(text => ["[ERROR] Connection closed unexpectedly. ", text].join(''));
-      setStatesMessageStatus(() => MessageSuccess.ERROR);
-      // let fullText = `${responseState}`;
-      // setStatesBubble(prevStateArray => {
-      //   prevStateArray[prevStateArray.length - 1] = <ChatBubble text={fullText} direction='left' id={responseNumberState} finished={true}></ChatBubble>;
-      //   return [...prevStateArray];
-      // });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      let message = "Error: Unable to fetch response from server.";
+      currentResponseBubble = <ChatErrorBubble text={message} id={responseNumberState}></ChatErrorBubble>;
 
-    },
-  });
-
+    }
+    return currentResponseBubble;
+  };
 
   return (
     <>
@@ -121,7 +66,7 @@ function App() {
       <main>
         <div className="chat-container">
           {bubblesState}
-        <div ref={chatEndRef}/>
+          <div ref={chatEndRef} />
         </div>
         {inputBox}
       </main>
