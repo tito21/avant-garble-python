@@ -40,4 +40,9 @@ main {
   main {
     width: 95vw;
   }
+
+  .input-form > button {
+    padding: 0.6em 0;
+  }
+
 }
