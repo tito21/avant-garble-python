@@ -16,7 +16,7 @@ class GeneratedResponse(BaseModel):
 
 
 def load_model():
-    model = ngram.load_model("model/3gram_model_small_bytes.cdb")
+    model = ngram.load_model("model/3gram_model_bytes_ascii.cdb")
     # model = ngram.load_pickle_model("model/3gram_model.pkl")
     yield model
     # Shutdown the model if needed
@@ -40,7 +40,7 @@ def get_text(input_text: str, num_words: int = 50, model=Depends(load_model)) ->
 @app.websocket("ws/get-text")
 async def get_text_ws(websocket: WebSocket):
     await websocket.accept()
-    model = ngram.load_model("model/3gram_model.cdb")
+    model = ngram.load_model("model/3gram_model_bytes.cdb")
     try:
         while True:
             data = await websocket.receive_text()
