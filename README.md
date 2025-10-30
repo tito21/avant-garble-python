@@ -76,7 +76,8 @@ npm run build
 ```
 
 The back end runs on Python using [FastAPI](https://fastapi.tiangolo.com/). To
-manage dependencies the project uses [uv](https://docs.astral.sh/uv/), To run activate the eniorment and then run `fastapi run .\main.py`
+manage dependencies the project uses [uv](https://docs.astral.sh/uv/), To run
+activate the environment and then run `fastapi run .\main.py`
 
 The front end is writing in React with Typescript and it is located in `client`.
 The backend uses FastAPI to serve the client and the answers. The answers are

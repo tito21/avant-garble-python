@@ -87,4 +87,4 @@ WORKDIR /app
 RUN python download_nltk_data.py
 
 # Run the FastAPI application by default
-CMD ["fastapi", "run", "--host", "0.0.0.0", "main.py"]
+CMD ["fastapi", "run", "--host", "0.0.0.0", "--port", "8080", "main.py"]
